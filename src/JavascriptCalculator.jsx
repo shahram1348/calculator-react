@@ -93,7 +93,7 @@ class JavascriptCalculator extends Component {
     const { output } = this.state;
     return (
       <div className="calculator">
-        <div className="display">
+        <div id="display" className="display">
           <div className="formula">{this.state.formula}</div>
           <div className="output">{output}</div>
         </div>

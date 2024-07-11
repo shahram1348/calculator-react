@@ -23,7 +23,7 @@ class Buttons extends React.Component {
         <button id="decimal" onClick={() => numbers(".")} value=".">
           .
         </button>
-        <button id="equal" onClick={evaluate} value="=">
+        <button id="equals" onClick={evaluate} value="=">
           =
         </button>
         <button id="one" onClick={() => numbers("1")} value="1">
