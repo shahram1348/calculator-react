@@ -93,9 +93,9 @@ class JavascriptCalculator extends Component {
     const { output } = this.state;
     return (
       <div className="calculator">
-        <div id="display" className="display">
+        <div  className="display">
           <div className="formula">{this.state.formula}</div>
-          <div className="output">{output}</div>
+          <div id="display" className="output">{output}</div>
         </div>
         <Buttons
           initialize={this.handleInitialize}
