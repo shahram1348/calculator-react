@@ -22,6 +22,10 @@ class JavascriptCalculator extends Component {
   handleNumbers = (number) => {
     const { output, formula, operator, calculationJustPerformed } = this.state;
 
+    if (number === "." && output.includes(".")) {
+      return;
+    }
+
     if (calculationJustPerformed) {
       this.setState({
         output: number,
@@ -35,60 +39,72 @@ class JavascriptCalculator extends Component {
         formula: formula + number,
         operator: null
       });
-    } else if (output === "0" && number !== ".") {
+    } else  {
       // Replace initial zero
       this.setState({
-        output: number,
-        formula: formula === "0" ? number : formula + number
+        output: output === "0" && number !== "." ? number : output + number,
+        formula: formula === "0" && number !== "." ? number : formula + number
       });
-    } else {
-      // Continue the current number
-      this.setState({
-        output: output + number,
-        formula: formula + number
-      });
-    }
+    } 
   };
   
-  handleOperators = (newOperator) => {
-    const { output, formula, operator } = this.state;
+  handleEvaluate = () => {
+    const { formula } = this.state;
+    
+    const cleanFormula = formula.replace(/[+\-x/]$/, '');
+    const tokens = cleanFormula.match(/(-?\d+\.?\d*)|([+\-x/])/g) || [];
+    
+    const calculate = (tokens) => {
+      const operators = ['x', '/', '+', '-'];
+      
+      for (let op of operators) {
+        for (let i = 0; i < tokens.length; i++) {
+          if (tokens[i] === op) {
+            const left = parseFloat(tokens[i - 1]);
+            const right = parseFloat(tokens[i + 1]);
+            const result = this.performOperation(left, right, op);
+            tokens.splice(i - 1, 3, result.toString());
+            i -= 2;
+          }
+        }
+      }
+      
+      return parseFloat(tokens[0]);
+    };
   
-    if (operator) {
-      // Replace the last operator
-      this.setState({
-        formula: formula.slice(0, -1) + newOperator,
-        operator: newOperator
-      });
-    } else {
-      // Add the operator to the formula
-      this.setState({
-        formula: formula + newOperator,
-        operator: newOperator,
-        previousVal: parseFloat(output)
-      });
-    }
+    const result = calculate(tokens);
+  
+    this.setState({
+      formula: result.toString(),
+      output: result.toString(),
+      previousVal: null,
+      operator: null,
+      calculationJustPerformed: true
+    });
   };
-
-handleEvaluate = () => {
-  const { formula } = this.state;
-  const parts = formula.split(/([+\-x/])/);
   
-  if (parts.length < 3) return;
+handleOperators = (newOperator) => {
+  const { formula, operator } = this.state;
 
-  let result = parseFloat(parts[0]);
-  for (let i = 1; i < parts.length; i += 2) {
-    const operator = parts[i];
-    const value = parseFloat(parts[i + 1]);
-    result = this.performOperation(result, value, operator);
+  // Check if the new operator is a minus sign and the last character isn't already a minus
+  if (newOperator === '-' && formula.slice(-1) !== '-') {
+    this.setState({
+      formula: formula + newOperator,
+      operator: newOperator
+    });
+  } else {
+    // Remove any trailing operators (except a single minus sign)
+    let newFormula = formula.replace(/[+x/]-?$|[-+x/]$/, '');
+    
+    // Add the new operator
+    newFormula += newOperator;
+
+    this.setState({
+      formula: newFormula,
+      operator: newOperator,
+      output: newOperator
+    });
   }
-
-  this.setState({
-    formula: result.toString(),
-    output: result.toString(),
-    previousVal: null,
-    operator: null,
-    calculationJustPerformed: true
-  });
 };
 
 
