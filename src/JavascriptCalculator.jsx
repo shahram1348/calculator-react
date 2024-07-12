@@ -1,8 +1,12 @@
 import React, { Component } from "react";
 import Buttons from "./Buttons";
 
+const endsWithOperator = /[x+-/]$/;
+const endsWithNegativeSign = /\d[x/+-]{1}-$/;
+
 class JavascriptCalculator extends Component {
   state = {
+    currentVal: "",
     formula: "",
     output: "0",
     previousVal: null,
@@ -48,65 +52,58 @@ class JavascriptCalculator extends Component {
     } 
   };
   
-  handleEvaluate = () => {
-    const { formula } = this.state;
+handleEvaluate = () => {
+  const { formula } = this.state;
+  
+  if (!formula.includes("Limit")) {
+    let expression = formula;
+    while (endsWithOperator.test(expression)) {
+      expression = expression.slice(0, -1);
+    }
+    expression = expression.replace(/x/g, "*").replace(/-/g, "-").replace("--", "-");
     
-    const cleanFormula = formula.replace(/[+\-x/]$/, '');
-    const tokens = cleanFormula.match(/(-?\d+\.?\d*)|([+\-x/])/g) || [];
-    
-    const calculate = (tokens) => {
-      const operators = ['x', '/', '+', '-'];
+    try {
+      let answer = Function(`'use strict'; return (${expression})`)();
+      answer = Math.round(answer * 1e12) / 1e12;
       
-      for (let op of operators) {
-        for (let i = 0; i < tokens.length; i++) {
-          if (tokens[i] === op) {
-            const left = parseFloat(tokens[i - 1]);
-            const right = parseFloat(tokens[i + 1]);
-            const result = this.performOperation(left, right, op);
-            tokens.splice(i - 1, 3, result.toString());
-            i -= 2;
-          }
-        }
-      }
-      
-      return parseFloat(tokens[0]);
-    };
-  
-    const result = calculate(tokens);
-  
-    this.setState({
-      formula: result.toString(),
-      output: result.toString(),
-      previousVal: null,
-      operator: null,
-      calculationJustPerformed: true
-    });
-  };
-  
-handleOperators = (newOperator) => {
-  const { formula, operator } = this.state;
-
-  // Check if the new operator is a minus sign and the last character isn't already a minus
-  if (newOperator === '-' && formula.slice(-1) !== '-') {
-    this.setState({
-      formula: formula + newOperator,
-      operator: newOperator
-    });
-  } else {
-    // Remove any trailing operators (except a single minus sign)
-    let newFormula = formula.replace(/[+x/]-?$|[-+x/]$/, '');
-    
-    // Add the new operator
-    newFormula += newOperator;
-
-    this.setState({
-      formula: newFormula,
-      operator: newOperator,
-      output: newOperator
-    });
+      this.setState({
+        output: answer.toString(),
+        formula: expression.replace(/\*/g, "⋅").replace(/-/g, "-").replace(/(x|\/|\+)-/, "$1-").replace(/^-/, "-") + "=" + answer,
+        previousVal: answer,
+        calculationJustPerformed: true
+      });
+    } catch (error) {
+      this.setState({
+        output: "Error",
+        formula: "Error",
+        previousVal: null,
+        calculationJustPerformed: true
+      });
+    }
   }
 };
 
+handleOperators = (newOperator) => {
+  const { formula, output, calculationJustPerformed } = this.state;
+
+  let newFormula;
+  if (calculationJustPerformed) {
+    newFormula = output + newOperator;
+  } else {
+    if (newOperator === '-' && !endsWithNegativeSign.test(formula)) {
+      newFormula = formula + newOperator;
+    } else {
+      newFormula = formula.replace(/[+\-x/]+$/, '') + newOperator;
+    }
+  }
+
+  this.setState({
+    formula: newFormula,
+    operator: newOperator,
+    output: newOperator,
+    calculationJustPerformed: false
+  });
+};
 
   performOperation = (previousVal, value, operator) => {
     switch (operator) {
